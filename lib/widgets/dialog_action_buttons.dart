@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 
 class DialogActionButtons extends StatelessWidget {
   final bool isLoading;
+  final bool isValid;
   final VoidCallback onCancel;
-  final VoidCallback onCreate;
+  final VoidCallback? onCreate;
 
   const DialogActionButtons({
-    Key? key,
+    super.key,
     required this.isLoading,
+    required this.isValid,
     required this.onCancel,
-    required this.onCreate,
-  }) : super(key: key);
+    this.onCreate,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) {
+      print('--- DialogActionButtons State ---');
+      print('isLoading: $isLoading');
+      print('isValid: $isValid');
+      print('onCreate is null: ${onCreate == null}');
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -21,15 +31,25 @@ class DialogActionButtons extends StatelessWidget {
           onPressed: isLoading ? null : onCancel,
           child: const Text('Cancel'),
         ),
+        const SizedBox(width: 8),
         ElevatedButton(
-          onPressed: isLoading ? null : onCreate,
+          onPressed:
+              (!isLoading && isValid && onCreate != null) ? onCreate : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: (isValid && !isLoading)
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey,
+          ),
           child: isLoading
               ? const SizedBox(
-                  height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
-              : const Text('Create Group'),
+              : const Text('Create'),
         ),
       ],
     );

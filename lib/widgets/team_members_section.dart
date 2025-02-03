@@ -6,11 +6,11 @@ class TeamMembersSection extends StatelessWidget {
   final Function(int) onRemovePressed;
 
   const TeamMembersSection({
-    Key? key,
+    super.key,
     required this.selectedStudents,
     required this.onAddPressed,
     required this.onRemovePressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

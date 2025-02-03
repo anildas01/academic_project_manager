@@ -21,9 +21,10 @@ class FirebaseService {
       bool isEmail = contact.contains('@');
       String fieldToCheck = isEmail ? 'email' : 'phone';
 
-      // Use correct collection name (plural)
-      String collectionName =
-          role.toLowerCase() + 's'; // 'students' or 'faculty'
+      // Use correct collection name
+      String collectionName = role.toLowerCase() == 'faculty'
+          ? 'faculty' // Keep faculty singular
+          : '${role.toLowerCase()}s'; // Only pluralize for students
 
       print(
           'Querying collection: $collectionName with field: $fieldToCheck = $contact');
@@ -310,34 +311,49 @@ class FirebaseService {
     }
 
     try {
-      // First, get faculty details from faculty collection
-      Map<String, dynamic>? facultyDetails = await getFacultyDetails(contact);
+      // First, fetch complete faculty data from faculty collection
+      QuerySnapshot facultyQuery;
+      if (contact.contains('@')) {
+        facultyQuery = await _firestore
+            .collection('faculty')
+            .where('email', isEqualTo: contact)
+            .get();
+      } else {
+        facultyQuery = await _firestore
+            .collection('faculty')
+            .where('phone', isEqualTo: contact)
+            .get();
+      }
 
-      if (facultyDetails == null) {
-        print('Error: Faculty details not found in database');
+      if (facultyQuery.docs.isEmpty) {
+        print('No faculty found with this contact info');
         return false;
       }
 
-      String email = facultyDetails['email'];
-      String phone = facultyDetails['phone'];
+      // Get the complete faculty data
+      Map<String, dynamic> facultyData =
+          facultyQuery.docs.first.data() as Map<String, dynamic>;
+      print('Found faculty data: $facultyData');
 
-      // Generate a valid document ID using email
-      String userId = email.replaceAll('@', '_').replaceAll('.', '_');
+      // Create user ID from email
+      String userId =
+          facultyData['email'].replaceAll('@', '_').replaceAll('.', '_');
 
-      print('Creating login document with ID: $userId');
-
+      // Store complete faculty data along with login credentials
       await _firestore.collection('faculty_logins').doc(userId).set({
-        'email': email,
-        'phone': phone,
+        'email': facultyData['email'],
+        'phone': facultyData['phone'],
         'password': password,
-        'name': facultyDetails['name'],
+        'name': facultyData['name'],
+        'department': facultyData['department'],
+        'designation': facultyData['designation'],
+        'specialization': facultyData['specialization'],
         'createdAt': FieldValue.serverTimestamp(),
         'lastLogin': null,
         'passwordStrength': PasswordValidator.calculateStrength(password),
       });
 
-      print(
-          'Faculty credentials stored successfully with both email and phone');
+      print('Faculty credentials stored successfully with complete data');
       return true;
     } catch (e) {
       print('Error storing faculty credentials: $e');
@@ -422,39 +438,44 @@ class FirebaseService {
   Future<List<Map<String, dynamic>>> getAvailableFaculty(
       String department) async {
     try {
-      print('Fetching faculty for $department');
+      print('\n=== DEBUG: Faculty Fetching Process ===');
+      print('Target department: "$department"');
 
-      // First get all logged-in faculty from faculty_logins
-      final QuerySnapshot loginSnapshot =
-          await _firestore.collection('faculty_logins').get();
+      // First, let's see all faculty records
+      final QuerySnapshot allFacultySnapshot =
+          await _firestore.collection('faculty').get();
 
-      // Get their emails
-      final List<String> loggedInEmails = loginSnapshot.docs
-          .map((doc) => (doc.data() as Map<String, dynamic>)['email'] as String)
-          .toList();
+      print('\nAll faculty records:');
+      allFacultySnapshot.docs.forEach((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        print('Faculty: ${data['name']} - Department: "${data['department']}"');
+      });
 
-      print('Found ${loggedInEmails.length} logged-in faculty members');
-
-      // Then fetch faculty details from faculty collection
+      // Now query with case-insensitive department filter
       final QuerySnapshot facultySnapshot = await _firestore
           .collection('faculty')
-          .where('department', isEqualTo: department)
+          .where('department', isEqualTo: department.toLowerCase())
           .get();
 
-      // Filter and map the results
-      final List<Map<String, dynamic>> availableFaculty = facultySnapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .where((faculty) => loggedInEmails.contains(faculty['email']))
-          .map((faculty) => {
-                'name': faculty['name'],
-                'email': faculty['email'],
-                'phone': faculty['phone'],
-                'department': faculty['department'],
-                'designation': faculty['designation'] ?? 'Faculty',
-              })
-          .toList();
+      print('\nFiltered results:');
+      print(
+          'Found ${facultySnapshot.docs.length} faculty members for department: $department');
 
-      print('Found ${availableFaculty.length} matching faculty members');
+      final List<Map<String, dynamic>> availableFaculty =
+          facultySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        print('Faculty data: $data');
+        return {
+          'name': data['name'] ?? 'Unknown',
+          'email': data['email'] ?? '',
+          'phone': data['phone'] ?? '',
+          'department': data['department'] ?? '',
+          'designation': data['designation'] ?? 'Faculty',
+          'specialization': data['specialization'] ?? '',
+        };
+      }).toList();
+
+      print('Processed faculty list: $availableFaculty');
       return availableFaculty;
     } catch (e) {
       print('Error fetching faculty: $e');
@@ -566,13 +587,13 @@ class FirebaseService {
           await _firestore.collection('student_logins').get();
 
       print('\n1. Student Logins found: ${loginSnapshot.docs.length}');
-      loginSnapshot.docs.forEach((doc) {
+      for (var doc in loginSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         print('Login record:');
         print('- Email: ${data['email']}');
         print('- Department: ${data['department']}');
         print('- Semester: ${data['semester']}');
-      });
+      }
 
       // 2. Filter by department
       var departmentStudents = loginSnapshot.docs
@@ -615,9 +636,9 @@ class FirebaseService {
       print('\n3. Final grouping:');
       studentsBySemester.forEach((semester, students) {
         print('Semester $semester: ${students.length} students');
-        students.forEach((student) {
+        for (var student in students) {
           print('- ${student['name']} (${student['email']})');
-        });
+        }
       });
 
       return studentsBySemester;
@@ -653,6 +674,56 @@ class FirebaseService {
       return result;
     } catch (e) {
       print('Error fetching students: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>>
+      getAvailableFacultyByDepartment() async {
+    try {
+      print('\n=== DEBUG: Faculty Fetching Process ===');
+
+      // Get all faculty members
+      final QuerySnapshot facultySnapshot =
+          await _firestore.collection('faculty').get();
+
+      print('Total faculty members found: ${facultySnapshot.docs.length}');
+
+      // Create a map to store faculty by department
+      Map<String, List<Map<String, dynamic>>> facultyByDepartment = {};
+
+      // Process each faculty member
+      for (var doc in facultySnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final department = data['department'] as String;
+
+        print('Processing faculty: ${data['name']} from $department');
+
+        // Initialize the department list if it doesn't exist
+        if (!facultyByDepartment.containsKey(department)) {
+          facultyByDepartment[department] = [];
+        }
+
+        // Add faculty to their department
+        facultyByDepartment[department]!.add({
+          'name': data['name'] ?? 'Unknown',
+          'email': data['email'] ?? '',
+          'phone': data['phone'] ?? '',
+          'department': department,
+          'designation': data['designation'] ?? 'Faculty',
+          'specialization': data['specialization'] ?? '',
+        });
+      }
+
+      print('\nFaculty by Department:');
+      facultyByDepartment.forEach((dept, faculty) {
+        print('$dept: ${faculty.length} faculty members');
+      });
+
+      return facultyByDepartment;
+    } catch (e) {
+      print('Error fetching faculty by department: $e');
+      print(StackTrace.current);
       return {};
     }
   }

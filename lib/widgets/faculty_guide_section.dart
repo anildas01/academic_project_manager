@@ -6,11 +6,11 @@ class FacultyGuideSection extends StatelessWidget {
   final VoidCallback onRemovePressed;
 
   const FacultyGuideSection({
-    Key? key,
+    super.key,
     required this.selectedFaculty,
     required this.onAddPressed,
     required this.onRemovePressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -7,11 +7,11 @@ class FacultySelectorDialog extends StatefulWidget {
   final Function(String) onSelected;
 
   const FacultySelectorDialog({
-    Key? key,
+    super.key,
     required this.department,
     required this.selectedFaculty,
     required this.onSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<FacultySelectorDialog> createState() => _FacultySelectorDialogState();

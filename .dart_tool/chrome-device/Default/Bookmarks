@@ -1,0 +1,44 @@
+{
+   "checksum": "be14a2f218663bf565a99639643279cf",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13317126229929434",
+            "date_last_used": "0",
+            "guid": "e2cfebc7-03ea-4e8e-a811-2c899ccef9b6",
+            "id": "6",
+            "name": "Module_1-1[1].pdf",
+            "type": "url",
+            "url": "file:///C:/Users/hp/AppData/Local/Microsoft/Windows/INetCache/IE/90NZ9OPC/Module_1-1[1].pdf"
+         } ],
+         "date_added": "13383075585818163",
+         "date_last_used": "0",
+         "date_modified": "13317126229929434",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "Bookmarks bar",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13383075585818166",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13383075585818169",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}
